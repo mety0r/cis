@@ -1,8 +1,9 @@
-from typing import Any, List
+from typing import List
 import asyncio
 import json
 import logging
 import os
+import imghdr  # Added import for checking image format
 
 from albumentations import Compose, LongestMaxSize, Normalize, PadIfNeeded
 from albumentations.pytorch import ToTensorV2
@@ -45,7 +46,6 @@ class ClassifyModel:
         output_ts = activation_fn(output_ts)
         labels = list(self.tag2class.keys())
         logging.debug(f"output_ts: {output_ts.shape}")
-        #logging.debug(f"output_pb: {output_pb}")
         res = []
         trh = 0.5
         for output_t in output_ts:
@@ -74,15 +74,20 @@ st.sidebar.title("About")
 st.sidebar.info(
     "This application identifies the crop health in the picture.")
 
-
 st.title('Wheat Rust Identification')
 
 st.write("Upload an image.")
 uploaded_file = st.file_uploader("")
 
-if uploaded_file is not None:
-    image = PIL.Image.open(uploaded_file).resize((512,512))
+# Check if the uploaded file is an image and process it
+if uploaded_file is not None and imghdr.what(uploaded_file) is not None:
+    image = PIL.Image.open(uploaded_file).resize((512, 512))
     img = np.array(image)
-    wheat_type,confidence = m.predict(img)
-    st.write(f"I think this is **{wheat_type}**(confidence: **{round(float(confidence),4)*100}%**)")
+    wheat_type, confidence = m.predict(img)
+    confidence_percentage = round(float(confidence) * 100, 2)
+    st.write(
+        f"I think this is **{wheat_type}** (confidence: **{confidence_percentage}%**)"
+    )
     st.image(image, caption='Uploaded Image.', use_column_width=True)
+else:
+    st.write("Please upload a valid image file.")
